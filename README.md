@@ -2,3 +2,4 @@
 Nicetia16. Nicetiasixteen. Nicetias. *Niceties*, got it? :V
 
 - CMake toolchain definition for ia16-elf-gcc for DOS
+- minified build of libstdc++ for ia16-elf-gcc

@@ -1,0 +1,53 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  Build:
+    name: Build
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout libstdc++
+        uses: actions/checkout@v4
+        with:
+          repository: tkchia/gcc-ia16
+          fetch-depth: 1
+          path: gcc-ia16
+
+      - name: Fetch DOS toolchain
+        run: |
+          sudo add-apt-repository ppa:tkchia/build-ia16
+          sudo apt update
+          sudo apt install gcc-ia16-elf libi86-ia16-elf -y
+
+      - name: Build libstdc++
+        env:
+          CFLAGS: -march=i8088 -mcmodel=small -Os
+          CXXFLAGS: -march=i8088 -mcmodel=small -Os -fno-exceptions -fno-rtti
+        run: |
+          cd gcc-ia16
+          mv config-ml.in ../
+          cd libstdc++-v3
+          ./configure \
+            --host=ia16-elf \
+            --target=ia16-elf \
+            --with-newlib \
+            --disable-libstdcxx-dual-abi \
+            --disable-extern-template \
+            --disable-wchar_t \
+            --disable-libstdcxx-verbose \
+            --disable-clocale \
+            --disable-nls \
+            --prefix=${GITHUB_WORKSPACE}/out \
+            --disable-multilib
+          make install
+  
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nicetia16
+          path: |
+            out
