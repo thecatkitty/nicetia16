@@ -2,14 +2,20 @@ name: Build
 
 on:
   workflow_dispatch:
+  push:
+    tags: [REL-*]
 
 jobs:
   Build:
-    name: Build
-
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout nicetia16
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          path: nicetia16
+
       - name: Checkout libstdc++
         uses: actions/checkout@v4
         with:
@@ -43,11 +49,47 @@ jobs:
             --disable-nls \
             --prefix=${GITHUB_WORKSPACE}/out \
             --disable-multilib
-          make install
-  
+          make
+
+      - name: Copy files
+        run: |
+          cd gcc-ia16/libstdc++-v3 && make install && cd ../..
+          cp -r nicetia16/cmake out/cmake
+          cp nicetia16/README.md out/
+          cp nicetia16/LICENSE out/
+          cp gcc-ia16/COPYING3 out/
+          cp gcc-ia16/COPYING.RUNTIME out/
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: nicetia16
           path: |
             out
+
+  Release:
+    runs-on: ubuntu-latest
+    needs: Build
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Fetch build output
+        uses: actions/download-artifact@v4
+        with:
+          name: nicetia16
+
+      - name: Get release details
+        id: details
+        run: |
+          echo "::set-output name=stamp::$(date +'%Y%m%d')"
+
+      - name: Prepare archive
+        run: |
+          zip -r nicetia16-${{ github.ref_name }}.zip *
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          files: |
+            nicetia16-${{ github.ref_name }}.zip
