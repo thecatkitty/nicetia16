@@ -7,7 +7,15 @@ on:
 
 jobs:
   Build:
-    runs-on: ubuntu-latest
+    name: Build for ${{ matrix.target }}
+
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        target:
+          - i8088
+          - i286
 
     steps:
       - name: Checkout nicetia16
@@ -31,8 +39,8 @@ jobs:
 
       - name: Build libstdc++
         env:
-          CFLAGS: -march=i8088 -mcmodel=small -Os
-          CXXFLAGS: -march=i8088 -mcmodel=small -Os -fno-exceptions -fno-rtti
+          CFLAGS: -march=${{ matrix.target }} -mcmodel=small -Os
+          CXXFLAGS: -march=${{ matrix.target }} -mcmodel=small -Os -fno-exceptions -fno-rtti
         run: |
           cd gcc-ia16
           mv config-ml.in ../
@@ -63,7 +71,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nicetia16
+          name: nicetia16-${{ matrix.target }}
           path: |
             out
 
@@ -75,8 +83,6 @@ jobs:
     steps:
       - name: Fetch build output
         uses: actions/download-artifact@v4
-        with:
-          name: nicetia16
 
       - name: Get release details
         id: details
@@ -85,11 +91,13 @@ jobs:
 
       - name: Prepare archive
         run: |
-          zip -r nicetia16-${{ github.ref_name }}.zip *
+          cd nicetia16-i8088 && zip -r ../nicetia16-${{ github.ref_name }}-i8088.zip * && cd ..
+          cd nicetia16-i286  && zip -r ../nicetia16-${{ github.ref_name }}-i286.zip *  && cd ..
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ github.ref_name }}
           files: |
-            nicetia16-${{ github.ref_name }}.zip
+            nicetia16-${{ github.ref_name }}-i8088.zip
+            nicetia16-${{ github.ref_name }}-i286.zip
